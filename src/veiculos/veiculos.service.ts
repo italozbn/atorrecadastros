@@ -1,64 +1,84 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectModel } from '@nestjs/sequelize';
-import { Veiculos } from './veiculos.model';
-import { RpcException } from '@nestjs/microservices';
+import { Injectable,NotFoundException } from '@nestjs/common';
+import { DataSource, Repository } from 'typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import {Veiculo} from './entities/veiculos.entity'
 @Injectable()
 export class VeiculosService {
   constructor(
-    @InjectModel(Veiculos)
-    private VeiculosModel: typeof Veiculos,
+    @InjectDataSource() private readonly connection: DataSource,
+    @InjectRepository(Veiculo)
+    private readonly veiculos: Repository<Veiculo>,
   ) {}
+  
+  async TrazVeiculo(dados : number ) : Promise<any> {
+      try {
+        return await this.connection.query(`
+        SELECT 
+        id_veiculo as id,
+        cliente,
+        categoria,
+        placa,
+        marca,
+        modelo,
+        cor,
+        ano
+        from cadastro_veiculo where id_veiculo = ${dados}`);
+      } catch (error) {
+        throw new NotFoundException(error.message);
+      }
+      
+    
+  }
+  async findAll() : Promise<any> {
+      try {
+            return await this.connection.query(`SELECT 
+            id_veiculo as id,
+            cliente,
+            categoria,
+            placa,
+            marca,
+            modelo,
+            cor,
+            ano
+            from cadastro_veiculo`);
+        } catch (error) {
+            throw new NotFoundException(error.message);
+        }
+    }
+  async destroy(idVeiculo : number) : Promise<any> {
+      try {
+            return await this.connection.query(`delete from cadastro_veiculo where id_veiculo = ${idVeiculo}`);
+        } catch (error) {
+            throw new NotFoundException(error.message);
+        }
+    }
 
-  private readonly logger = new Logger(VeiculosService.name);
-  async findAll(query): Promise<any[]> {
+  async update(id: number,dados : any ) : Promise<Boolean> {
     try {
-      console.log('query', query);
-      return this.VeiculosModel.findAll({ where: query });
+      await this.connection.query(`update cadastro_veiculo set
+      cliente = '${dados.cliente}',
+      categoria = '${dados.categoria}',
+      placa = '${dados.placa}',
+      marca = '${dados.marca}',
+      modelo = '${dados.modelo}',
+      cor = '${dados.cor}',
+      ano = '${dados.ano}'
+     where id_veiculo = ${id}`);//atualiza a semaforo_teltonika
+      return true
     } catch (error) {
-      this.logger.error(`error: ${JSON.stringify(error.message)}`);
-      throw new RpcException(error.message);
+      return true
+    }
+  }
+  async criar(dados : any ) : Promise<any> {
+    try {
+      await this.connection.query(`insert into cadastro_veiculo (cliente,categoria,placa,marca,modelo,cor,ano) values ('${dados.cliente}','${dados.categoria}','${dados.placa}','${dados.marca}','${dados.modelo}','${dados.cor}','${dados.ano}')`);//atualiza a semaforo_teltonika
+      return true
+    } catch (error) {
+      return true
     }
   }
 
-  findOne(id: number): Promise<any> {
-    try {
-      return this.VeiculosModel.findOne({
-        where: {
-          id,
-        },
-      });
-    } catch (error) {
-      this.logger.error(`error: ${JSON.stringify(error.message)}`);
-      throw new RpcException(error.message);
-    }
-  }
 
-  async create(body): Promise<any> {
-    try {
-      return await this.VeiculosModel.create(body);
-    } catch (error) {
-      this.logger.error(`error: ${JSON.stringify(error.message)}`);
-      throw new RpcException(error.message);
-    }
-  }
 
-  async remove(id: number): Promise<void> {
-    try {
-      const contact = await this.findOne(id);
-      return await contact.destroy();
-    } catch (error) {
-      this.logger.error(`error: ${JSON.stringify(error.message)}`);
-      throw new RpcException(error.message);
-    }
-  }
 
-  async update(id: number, body): Promise<any> {
-    try {
-      const contact = await this.findOne(id);
-      return await contact.update(body);
-    } catch (error) {
-      this.logger.error(`error: ${JSON.stringify(error.message)}`);
-      throw new RpcException(error.message);
-    }
-  }
 }

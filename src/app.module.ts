@@ -1,29 +1,50 @@
 import { Module } from '@nestjs/common';
-import { SequelizeModule } from '@nestjs/sequelize';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
-import { ConfigModule } from '@nestjs/config';
-import { ClientesModule } from './clientes/clientes.module';
-import { VeiculosModule } from './veiculos/veiculos.module';
+import { resolve } from "path";
+
 import { UsuariosModule } from './usuarios/usuarios.module';
+import { ClientesController } from './clientes/clientes.controller';
+import { ClientesModule } from './clientes/clientes.module';
+import { VeiculosService } from './veiculos/veiculos.service';
+import { VeiculosModule } from './veiculos/veiculos.module';
+
+const dotenv = require('dotenv');
+
+dotenv.config({ path: "src/.env" })
+
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      envFilePath: ['.env'],
-      isGlobal: true,
+    ConfigModule.forRoot(),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'mysql',
+        host: 'localhost',
+        port: 3306,
+        username: 'admin',
+        password: '$$At0rr3Controle',
+        database: 'torre',
+        logging: true,
+        extra: {
+          trustServerCertificate: true,
+        },
+        synchronize: true,
+      }),
     }),
-    SequelizeModule.forRoot({
-      dialect: 'mysql',
-      host: process.env.DATABASE_HOST || 'database',
-      port: parseInt(process.env.DATABASE_PORT) || 3306,
-      username: process.env.DATABASE_USER || 'atorre',
-      password: process.env.DATABASE_PASSWORD || 'w2r4y6i8',
-      database: process.env.DATABASENAME || 'atorre-dev',
-      synchronize: true,
-    }),
-    ClientesModule,
-    VeiculosModule,
     UsuariosModule,
+    ClientesModule,
+    VeiculosModule
+
+    
+    // PerfilAcessoModule,
+    // ContatoModule,
   ],
+  controllers: [],
   providers: [],
 })
 export class AppModule {}

@@ -1,64 +1,80 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectModel } from '@nestjs/sequelize';
-import { Usuarios } from './usaurios.model';
-import { RpcException } from '@nestjs/microservices';
+import { Injectable,NotFoundException } from '@nestjs/common';
+import { DataSource, Repository } from 'typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import {Usuarios} from './entities/usuarios.entity'
 @Injectable()
 export class UsuariosService {
   constructor(
-    @InjectModel(Usuarios)
-    private usuariosModel: typeof Usuarios,
+    @InjectDataSource() private readonly connection: DataSource,
+    @InjectRepository(Usuarios)
+    private readonly Usuarios: Repository<Usuarios>,
   ) {}
-
-  private readonly logger = new Logger(UsuariosService.name);
-  async findAll(query): Promise<Usuarios[]> {
-    try {
-      console.log('query', query);
-      return this.usuariosModel.findAll({ where: query });
-    } catch (error) {
-      this.logger.error(`error: ${JSON.stringify(error.message)}`);
-      throw new RpcException(error.message);
-    }
+  
+  async TrazUsuario(dados : number ) : Promise<any> {
+      try {
+        return await this.connection.query(`
+        SELECT 
+        id_usuario as id,
+        nome,
+        sobrenome,
+        senha,
+        cpf_cnpj
+        from usuario where id_usuario = ${dados}`);
+      } catch (error) {
+        throw new NotFoundException(error.message);
+      }
+      
+    
   }
-
-  findOne(id: number): Promise<Usuarios> {
-    try {
-      return this.usuariosModel.findOne({
-        where: {
-          id,
-        },
-      });
-    } catch (error) {
-      this.logger.error(`error: ${JSON.stringify(error.message)}`);
-      throw new RpcException(error.message);
+  async findAll() : Promise<any> {
+      try {
+            return await this.connection.query(`SELECT 
+            id_usuario as id,
+            nome,
+            sobrenome,
+            senha,
+            cpf_cnpj
+            from usuario`);
+        } catch (error) {
+            throw new NotFoundException(error.message);
+        }
     }
+  async destroy(idUsuario : number) : Promise<any> {
+      try {
+            return await this.connection.query(`delete from usuario where id_usuario = ${idUsuario}`);
+        } catch (error) {
+            throw new NotFoundException(error.message);
+        }
+    }
+
+  async update(id: number,dados : any ) : Promise<Boolean> {
+    try {
+      await this.connection.query(`update usuario set
+      nome = '${dados.nome}',
+      sobrenome = '${dados.sobrenome}',
+      cpf_cnpj = '${dados.cpf_cnpj}'
+       where id_usuario = ${id}`);//atualiza a semaforo_teltonika
+      return true
+    } catch (error) {
+      return true
+    }
+    
+    
   }
-
-  async create(body): Promise<Usuarios> {
+  async criar(dados : any ) : Promise<any> {
     try {
-      return await this.usuariosModel.create(body);
-    } catch (error) {
-      this.logger.error(`error: ${JSON.stringify(error.message)}`);
-      throw new RpcException(error.message);
-    }
-  }
+      await this.connection.query(`insert into usuario (nome,sobrenome,cpf_cnpj,senha) values(
+        '${dados.nome}',
+        '${dados.sobrenome}',
+        '${dados.cpf_cnpj}',
+        '${dados.senha}'
 
-  async remove(id: number): Promise<void> {
-    try {
-      const contact = await this.findOne(id);
-      return await contact.destroy();
+  )`);//atualiza a semaforo_teltonika
+      return true
     } catch (error) {
-      this.logger.error(`error: ${JSON.stringify(error.message)}`);
-      throw new RpcException(error.message);
+      return true
     }
-  }
-
-  async update(id: number, body): Promise<Usuarios> {
-    try {
-      const contact = await this.findOne(id);
-      return await contact.update(body);
-    } catch (error) {
-      this.logger.error(`error: ${JSON.stringify(error.message)}`);
-      throw new RpcException(error.message);
-    }
+    
+    
   }
 }

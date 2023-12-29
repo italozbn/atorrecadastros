@@ -1,61 +1,35 @@
-import { executeServiceAction } from './../utils/rmqErrorHandler';
-import { Controller, Logger } from '@nestjs/common';
-import {  CreateClienteDto,  UpdateClienteDto,  QueryClienteDto,} from './contact.dto';
-import { ClienteService } from './clientes.service';
-import { Cliente } from './cliente.model';
-import {  Ctx,  EventPattern,  MessagePattern,  Payload,  RmqContext,} from '@nestjs/microservices';
-
+import { Controller, Get, Post, Body, Patch, Param, Delete, Put} from '@nestjs/common';
+import { ClientesService } from './clientes.service';
 @Controller('clientes')
-export class ClienteController {
-  constructor(private clienteService: ClienteService) {}
+export class ClientesController {
+    constructor(private readonly clientesService: ClientesService) {}
 
-  private readonly logger = new Logger(ClienteController.name);
-
-  @EventPattern('create-cliente')
-  async create(
-    @Payload() contato: CreateClienteDto,
-    @Ctx() context: RmqContext,
-  ): Promise<any> {
-    return await executeServiceAction(
-      context,
-      async () => await this.clienteService.create(contato),
-    );
-  }
-
-  @MessagePattern('get-clientes')
-  async findAll(@Payload() query: QueryClienteDto, @Ctx() context: RmqContext): Promise<Cliente[]> {
-    const channel = context.getChannelRef();
-    const originalMessage = context.getMessage();
-    try {
-      return await this.clienteService.findAll(query);
-    } finally {
-      await channel.ack(originalMessage);
+    @Put()
+    update(@Body() dados: any) {
+      console.log(dados)
+      let id = dados.id;
+      return this.clientesService.update(id,dados);
     }
-  }
-  @MessagePattern('get-cliente')
-  async findOne(@Payload() id: number, @Ctx() context: RmqContext): Promise<any> {
-    const channel = context.getChannelRef();
-    const originalMessage = context.getMessage();
-    try {
-      return await this.clienteService.findOne(id);
-    } finally {
-      await channel.ack(originalMessage);
+
+    @Get()
+    async index() {
+        return await this.clientesService.findAll();
     }
-  }
 
-  @EventPattern('update-cliente')
-  async update(@Payload('id') id: number,    @Payload('cliente') UpdateClienteDto: UpdateClienteDto,    @Ctx() context: RmqContext): Promise<any> {
-    return await executeServiceAction(
-      context,
-      async () => await this.clienteService.update(id, UpdateClienteDto),
-    );
-  }
+    @Post()
+    async TrazCliente(@Body() dados) {
+        return await this.clientesService.TrazCliente(dados);
+    }
+    @Post('/criar')
+    async criarCliente(@Body() dados) {
+        return await this.clientesService.criar(dados);
+    }
 
-  @EventPattern('delete-cliente')
-  async remove(@Payload('id') id: number, @Ctx() context: RmqContext): Promise<void> {
-    return await executeServiceAction(
-      context,
-      async () => await this.clienteService.remove(id),
-    );
-  }
+
+    @Delete(':id')
+    // @UseGuards(AuthGuard('jwt'))
+    async destroy(@Param('id') id: number) {
+        await this.clientesService.destroy(id);
+    }
+
 }
